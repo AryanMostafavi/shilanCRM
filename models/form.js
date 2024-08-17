@@ -1,12 +1,17 @@
 const mysql = require('mysql2/promise');
-const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME } = require('../config/db');
+const fs = require('fs');
+const {DB_HOST, DB_USER, DB_PASSWORD, DB_NAME} = require('../config/db');
 require('dotenv').config();
+const path = require('path');
+const { promisify } = require('util');
+const unlinkAsync = promisify(fs.unlink);
+const moment = require('moment');
+Adler32 = require('adler32-js');
 
 const dbName = process.env.DB_NAME;
 const dbHost = process.env.DB_HOST;
 const dbUser = process.env.DB_USER;
 const dbPassword = process.env.DB_PASSWORD;
-
 
 const dbConfig = {
     host: dbHost,
@@ -31,45 +36,51 @@ exports.createForm = async (formData) => {
     let connection;
     try {
         connection = await pool.getConnection();
+        let hash = new Adler32();
+        hash.update(formData.phonenumber);
+        let userCode =   hash.digest('hex')
         const {
-            firstName = null,
-            lastName = null,
-            phoneNumber = null,
+            firstname = null,
+            lastname = null,
+            phonenumber = null,
             email = null,
             address = null,
-            nationalCode = null,
-            birthDate = null,
-            postalCode = null,
-            maritalStatus = null,
-            personType = null,
-            imageUrl,
+            nationalcode = null,
+            birthdate = null,
+            postalcode = null,
+            maritalstatus = null,
+            persontype = null,
+            imageurl = null,
             province,
             city,
-            isActive,
+            isactive = false,
+            usercode = userCode,
         } = formData;
-        const isMarried = maritalStatus === 'مجرد' ? false : true;
-
+        const ismarried = maritalstatus === 'مجرد' ? false : true;
         const [result] = await connection.execute(
-            'INSERT INTO forms (firstName, lastName, phoneNumber, email, address, nationalCode, birthDate, postalCode, isMarried, personType, imageUrl,province,city,isActive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?)',
-            [firstName, lastName, phoneNumber, email, address, nationalCode, birthDate, postalCode, isMarried, personType, imageUrl,province,city , isActive]
+            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl,province,city,isactive ,usercode) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)',
+            [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode]
         );
 
-        // const formId = result.insertId;
-        //
-        // if (formData.fields) {
-        //     for (const field of formData.fields) {
-        //         const { label, type, required = false, options = null } = field;
-        //         await connection.execute(
-        //             'INSERT INTO fields (form_id, label, type, required, options) VALUES (?, ?, ?, ?, ?)',
-        //             [formId, label, type, required, JSON.stringify(options)]
-        //         );
-        //     }
-        // }
 
-        // return {
-        //     id: formId, firstName, lastName, phoneNumber, email, address,
-        //     nationalCode, birthDate, postalCode, isMarried, personType,province,city, imageUrl,fields: formData.fields || []
-        // };
+        return {
+            firstname,
+            lastname,
+            phonenumber,
+            email,
+            address,
+            nationalcode,
+            birthdate,
+            postalcode,
+            ismarried,
+            persontype,
+            province,
+            city,
+            imageurl,
+            usercode,
+            isactive,
+            fields: formData.fields || []
+        };
     } catch (error) {
         console.error("Error creating form:", error);
         throw error;
@@ -80,7 +91,7 @@ exports.createForm = async (formData) => {
 
 exports.getForms = async () => {
     const connection = await connectDB();
-    const [forms] = await connection.execute('SELECT * FROM forms');
+    const [forms] = await connection.execute('SELECT * FROM forms where deleted_at IS NULL ORDER BY id DESC');
     return forms;
 };
 
@@ -96,35 +107,150 @@ exports.getFormById = async (formId) => {
 
 exports.updateForm = async (formId, formData) => {
     const connection = await connectDB();
+
     const {
-        firstName, lastName, phoneNumber, email, address, nationalCode, birthDate,
-        postalCode, isMarried, personType, imageUrl,province,city,isActive
+        firstname, lastname, phonenumber, email, address, nationalcode, birthdate,
+        postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode
     } = formData;
 
-    await connection.execute(
-        'UPDATE forms SET name = ?, firstName = ?, lastName = ?, phoneNumber = ?,postalCode=?, email = ?, nationalCode = ?, address = ?, birthDate = ?, isMarried = ?, personType = ? WHERE id = ?',
-        [ firstName, lastName, phoneNumber, email, nationalCode, address, postalCode, birthDate, isMarried, personType, formId,imageUrl,province,city,isActive]
-    );
+    const personTypeValues = Array.isArray(persontype) ? persontype : [];
 
-    await connection.execute('DELETE FROM fields WHERE form_id = ?', [formId]);
 
-    for (const field of fields) {
-        const { label, type, required, options } = field;
-        await connection.execute(
-            'INSERT INTO fields (form_id, label, type, required, options) VALUES (?, ?, ?, ?, ?)',
-            [formId, label, type, required, JSON.stringify(options)]
-        );
+    const processedPersonType = personTypeValues.map(value => {
+        const numberValue = Number(value);
+        return isNaN(numberValue) ? value : numberValue;
+    });
+
+    const [[existingForm]]  = await connection.execute('SELECT * FROM forms WHERE id = ?', [formId]);
+    if (formData.imageurl) {
+        const oldImageUrl = existingForm.imageurl.replace('static', '');
+        const oldFilePath = path.join(__dirname,'../public', path.basename(oldImageUrl));
+
+        try {
+            await unlinkAsync(oldFilePath);
+        } catch (error) {
+            console.error('Failed to delete old file:', error);
+        }
+    }
+
+
+    const oldImageUrl = existingForm.imageurl ? existingForm.imageurl.replace('static/', 'public/') : null;
+
+    let updateFields = [];
+    let values = [];
+
+    if (formData.firstname !== undefined) {
+        updateFields.push('firstname = ?');
+        values.push(formData.firstname);
+    }
+    if (formData.lastname !== undefined) {
+        updateFields.push('lastname = ?');
+        values.push(formData.lastname);
+    }
+    if (formData.phonenumber !== undefined) {
+        updateFields.push('phonenumber = ?');
+        values.push(formData.phonenumber);
+    }
+    if (formData.email !== undefined) {
+        updateFields.push('email = ?');
+        values.push(formData.email);
+    }
+    if (formData.address !== undefined) {
+        updateFields.push('address = ?');
+        values.push(formData.address);
+    }
+    if (formData.nationalcode !== undefined) {
+        updateFields.push('nationalcode = ?');
+        values.push(formData.nationalcode);
+    }
+    if (formData.birthdate !== undefined) {
+        updateFields.push('birthdate = ?');
+        values.push(formData.birthdate);
+    }
+    if (formData.postalcode !== undefined) {
+        updateFields.push('postalcode = ?');
+        values.push(formData.postalcode);
+    }
+    if (formData.ismarried !== undefined) {
+        updateFields.push('ismarried = ?');
+        values.push(formData.ismarried);
+    }
+    if (processedPersonType.length > 0) {
+        updateFields.push('persontype = ?');
+        values.push(processedPersonType);
+    }
+    if (formData.imageurl !== null) {
+        updateFields.push('imageurl = ?');
+        values.push(formData.imageurl);
+    }
+    if (formData.province !== undefined) {
+        updateFields.push('province = ?');
+        values.push(formData.province);
+    }
+    if (formData.city !== undefined) {
+        updateFields.push('city = ?');
+        values.push(formData.city);
+    }
+    if (formData.isactive !== undefined) {
+        updateFields.push('isactive = ?');
+        values.push(formData.isactive);
+    }
+    if (formData.usercode !== undefined) {
+        updateFields.push('usercode = ?');
+        values.push(formData.usercode);
+    }
+
+    if (updateFields.length === 0) {
+        throw new Error('No fields to update');
+    }
+
+    values.push(formId);
+
+    const updateQuery = `UPDATE forms SET ${updateFields.join(', ')} WHERE id = ?`;
+
+    try {
+        await connection.execute(updateQuery, values);
+    } catch (error) {
+        console.error('Error executing update:', error);
+        throw error;
+    }
+
+    if (oldImageUrl && formData.imageurl && oldImageUrl !== formData.imageurl) {
+        const oldFilePath = path.join(__dirname, '../public', path.basename(oldImageUrl));
+
+        try {
+            if (fs.existsSync(oldFilePath)) {
+                await unlinkAsync(oldFilePath);
+            }
+        } catch (error) {
+            console.error('Failed to delete old file:', error);
+        }
     }
 
     return {
-        id: formId,  firstName, lastName, phoneNumber, email,
-        nationalCode, address, birthDate, isMarried, personType, fields,postalCode , imageUrl,province,city,isActive
+        id: formId,
+        ...formData,
+        persontype: processedPersonType
     };
 };
 
 
 exports.deleteForms = async (formId) => {
     const connection = await connectDB();
-    const result = await connection.execute('DELETE from forms where id= ?' ,[formId]);
+    const deletedAt = moment().format('YYYY-MM-DD HH:mm:ss');
+    const result = await connection.execute('UPDATE forms set deleted_at = ? where id= ?', [deletedAt, formId]);
     return result
+};
+
+
+exports.changeActiveType = async (formId, type) => {
+
+    if (formId === undefined || type === undefined) {
+        throw new Error("formId and type must be defined");
+    }
+    if (typeof type != "number") type = number(type);
+
+    const connection = await connectDB();
+    const result = await connection.execute('UPDATE forms SET isactive = ? WHERE id = ?', [type, formId]);
+    return result;
 };
