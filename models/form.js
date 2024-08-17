@@ -51,6 +51,8 @@ exports.createForm = async (formData) => {
             maritalstatus = null,
             persontype = null,
             imageurl = null,
+            cartnumber = null,
+            approved = false,
             province,
             city,
             isactive = false,
@@ -58,8 +60,8 @@ exports.createForm = async (formData) => {
         } = formData;
         const ismarried = maritalstatus === 'مجرد' ? false : true;
         const [result] = await connection.execute(
-            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl,province,city,isactive ,usercode) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)',
-            [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode]
+            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl,province,city,isactive ,usercode ,cartnumber, approved) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)',
+            [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode,cartnumber, approved]
         );
 
 
@@ -79,6 +81,8 @@ exports.createForm = async (formData) => {
             imageurl,
             usercode,
             isactive,
+            cartnumber,
+            approved,
             fields: formData.fields || []
         };
     } catch (error) {
@@ -110,7 +114,7 @@ exports.updateForm = async (formId, formData) => {
 
     const {
         firstname, lastname, phonenumber, email, address, nationalcode, birthdate,
-        postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode
+        postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode,cartnumber
     } = formData;
 
     const personTypeValues = Array.isArray(persontype) ? persontype : [];
@@ -146,6 +150,10 @@ exports.updateForm = async (formId, formData) => {
     if (formData.lastname !== undefined) {
         updateFields.push('lastname = ?');
         values.push(formData.lastname);
+    }
+    if (formData.cartnumber !== undefined) {
+        updateFields.push('cartnumber = ?');
+        values.push(formData.cartnumber);
     }
     if (formData.phonenumber !== undefined) {
         updateFields.push('phonenumber = ?');
@@ -252,5 +260,17 @@ exports.changeActiveType = async (formId, type) => {
 
     const connection = await connectDB();
     const result = await connection.execute('UPDATE forms SET isactive = ? WHERE id = ?', [type, formId]);
+    return result;
+};
+
+exports.changeApprovedType = async (formId, type) => {
+
+    if (formId === undefined || type === undefined) {
+        throw new Error("formId and type must be defined");
+    }
+    if (typeof type != "number") type = number(type);
+
+    const connection = await connectDB();
+    const result = await connection.execute('UPDATE forms SET approved = ? WHERE id = ?', [type, formId]);
     return result;
 };

@@ -30,6 +30,8 @@ const createSchema = async () => {
                 address TEXT NOT NULL,
                 ismarried BOOLEAN NOT NULL,
                 imageurl VARCHAR(500) ,
+                cartnumber VARCHAR(20) NULL,
+                approved BOOLEAN NUll,
                 birthdate VARCHAR(255) NOT NULL,
                 postalcode VARCHAR(255) NOT NULL,
                 persontype VARCHAR(255) NOT NULL,

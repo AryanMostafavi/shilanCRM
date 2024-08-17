@@ -56,10 +56,20 @@ exports.deleteForm = async (req, res) => {
         res.status(400).json({message: error.message});
     }
 };
+
 exports.changeActiveType = async (req, res) => {
 
     try {
         const data = await Form.changeActiveType(req.params.id, req.body.type);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(400).json({message: error.message});
+
+    }
+}
+exports.changeApprovedType = async (req, res) => {
+    try {
+        const data = await Form.changeApprovedType(req.params.id, req.body.type);
         res.status(200).json(data);
     } catch (error) {
         res.status(400).json({message: error.message});

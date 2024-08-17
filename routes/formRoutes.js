@@ -12,5 +12,7 @@ router.put('/forms/:id', upload.single('imageurl'),formController.updateForm);
 router.delete('/forms/:id', formController.deleteForm);
 
 router.put('/forms/status/:id', formController.changeActiveType);
+router.put('/forms/accept/:id', formController.changeApprovedType);
+
 
 module.exports = router;
