@@ -78,13 +78,14 @@ exports.changeApprovedType = async (req, res) => {
     }
 }
 
-exports.sms = async (req, res) => {
-    try {
- let number = '09190115918'
-       const a = await sms.sendSMS(number)
-        res.status(200).json(a);
-    } catch (error) {
-        res.status(400).json({message: error.message});
-
-    }
-}
+// exports.sms = async (req, res) => {
+//     try {
+//  let number = 09196421676;
+//      let code = 123123123
+//        const a = await sms.sendSMS(number, code)
+//         res.status(200).json(a);
+//     } catch (error) {
+//         res.status(400).json({message: error.message});
+//
+//     }
+// }

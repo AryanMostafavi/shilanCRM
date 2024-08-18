@@ -5,10 +5,14 @@ const api = Kavenegar.KavenegarApi({
 });
 exports.sendSMS = async function(receptorNumber , usercode) {
     try {
-        api.Send({
-            message: `${usercode} باتشکر از ثبت نام شما در باشگاه تکنسین های باشگاه شیلان پس از تایید ثبت نام شما مبلغ دو میلیون ریال به کیف پول شما واریز خواهد شد. کد شما : `,
-            sender: "0018018949161",
-            receptor: receptorNumber
+        api.VerifyLookup({
+            receptor: receptorNumber,
+            token: usercode,
+            template: "tarazVerificationCode"
+        // api.Send({
+        //     message: `${usercode} باتشکر از ثبت نام شما در باشگاه تکنسین های باشگاه شیلان پس از تایید ثبت نام شما مبلغ دو میلیون ریال به کیف پول شما واریز خواهد شد. کد شما : `,
+        //     sender: "20009535",
+        //     receptor: receptorNumber
         }, function(response, status) {
             console.log("Response:", response);
             console.log("Status:", status);
