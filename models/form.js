@@ -59,9 +59,8 @@ exports.createForm = async (formData) => {
             isactive = false,
             usercode = userCode,
         } = formData;
-        // const ismarried = maritalstatus === 'مجرد' ? false : true;
         const [result] = await connection.execute(
-            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, persontype, imageurl,province,city,isactive ,usercode ,cartnumber, approved) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)',
+            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, persontype, imageurl,province,city,isactive ,usercode ,cartnumber, approved) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)',
             [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode,  persontype, imageurl, province, city, isactive, usercode,cartnumber, approved]
         );
 
