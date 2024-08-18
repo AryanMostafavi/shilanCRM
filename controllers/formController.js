@@ -1,4 +1,5 @@
 const Form = require('../models/form');
+const sms = require('../services/SMSService');
 
 exports.createForm = async (req, res) => {
     try {
@@ -71,6 +72,17 @@ exports.changeApprovedType = async (req, res) => {
     try {
         const data = await Form.changeApprovedType(req.params.id, req.body.type);
         res.status(200).json(data);
+    } catch (error) {
+        res.status(400).json({message: error.message});
+
+    }
+}
+
+exports.sms = async (req, res) => {
+    try {
+ let number = '09190115918'
+       const a = await sms.sendSMS(number)
+        res.status(200).json(a);
     } catch (error) {
         res.status(400).json({message: error.message});
 

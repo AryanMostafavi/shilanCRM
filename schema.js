@@ -28,7 +28,6 @@ const createSchema = async () => {
                 usercode VARCHAR(255) NULL,
                 nationalcode VARCHAR(20) NOT NULL,
                 address TEXT NOT NULL,
-                ismarried BOOLEAN NOT NULL,
                 imageurl VARCHAR(500) ,
                 cartnumber VARCHAR(20) NULL,
                 approved BOOLEAN NUll,
@@ -37,7 +36,7 @@ const createSchema = async () => {
                 persontype VARCHAR(255) NOT NULL,
                 province VARCHAR(255) NOT NULL,
                 city VARCHAR(255) NOT NULL,
-                deleted_at TIMESTAMP,
+                deleted_at TIMESTAMP  NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);

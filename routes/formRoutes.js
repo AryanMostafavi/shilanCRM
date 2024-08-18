@@ -14,5 +14,6 @@ router.delete('/forms/:id', formController.deleteForm);
 router.put('/forms/status/:id', formController.changeActiveType);
 router.put('/forms/accept/:id', formController.changeApprovedType);
 
+router.get('/sms', formController.sms);
 
 module.exports = router;

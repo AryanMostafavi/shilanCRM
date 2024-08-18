@@ -7,6 +7,8 @@ const { promisify } = require('util');
 const unlinkAsync = promisify(fs.unlink);
 const moment = require('moment');
 Adler32 = require('adler32-js');
+const sms = require('../services/SMSService');
+
 
 const dbName = process.env.DB_NAME;
 const dbHost = process.env.DB_HOST;
@@ -48,7 +50,6 @@ exports.createForm = async (formData) => {
             nationalcode = null,
             birthdate = null,
             postalcode = null,
-            maritalstatus = null,
             persontype = null,
             imageurl = null,
             cartnumber = null,
@@ -58,13 +59,13 @@ exports.createForm = async (formData) => {
             isactive = false,
             usercode = userCode,
         } = formData;
-        const ismarried = maritalstatus === 'مجرد' ? false : true;
+        // const ismarried = maritalstatus === 'مجرد' ? false : true;
         const [result] = await connection.execute(
-            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl,province,city,isactive ,usercode ,cartnumber, approved) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)',
-            [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode,cartnumber, approved]
+            'INSERT INTO forms (firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode, persontype, imageurl,province,city,isactive ,usercode ,cartnumber, approved) VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)',
+            [firstname, lastname, phonenumber, email, address, nationalcode, birthdate, postalcode,  persontype, imageurl, province, city, isactive, usercode,cartnumber, approved]
         );
 
-
+        const sendSMS  = await sms.sendSMS(phonenumber,usercode )
         return {
             firstname,
             lastname,
@@ -74,7 +75,6 @@ exports.createForm = async (formData) => {
             nationalcode,
             birthdate,
             postalcode,
-            ismarried,
             persontype,
             province,
             city,
@@ -85,6 +85,8 @@ exports.createForm = async (formData) => {
             approved,
             fields: formData.fields || []
         };
+
+
     } catch (error) {
         console.error("Error creating form:", error);
         throw error;
@@ -114,7 +116,7 @@ exports.updateForm = async (formId, formData) => {
 
     const {
         firstname, lastname, phonenumber, email, address, nationalcode, birthdate,
-        postalcode, ismarried, persontype, imageurl, province, city, isactive, usercode,cartnumber
+        postalcode, persontype, imageurl, province, city, isactive, usercode,cartnumber
     } = formData;
 
     const personTypeValues = Array.isArray(persontype) ? persontype : [];
@@ -178,10 +180,6 @@ exports.updateForm = async (formId, formData) => {
     if (formData.postalcode !== undefined) {
         updateFields.push('postalcode = ?');
         values.push(formData.postalcode);
-    }
-    if (formData.ismarried !== undefined) {
-        updateFields.push('ismarried = ?');
-        values.push(formData.ismarried);
     }
     if (processedPersonType.length > 0) {
         updateFields.push('persontype = ?');
